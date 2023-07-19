@@ -100,8 +100,8 @@ class DeepFaceHandler:
                         cv2.putText(frame, translit(face_name, language_code="ru", reversed=True), (left + 6, bottom + 12),
                                     cv2.FONT_HERSHEY_DUPLEX, 0.003 * (bottom - top),
                                     (255, 255, 255), 1)
-                    else:
-                        print('Пожалуйста, уберите телефон')
+                else:
+                    print('Пожалуйста, уберите телефон')
             #except:
                 #print('Лицо не распознано')
             cv2.imshow('image', frame)
