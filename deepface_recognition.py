@@ -13,6 +13,34 @@ def xywh2xyxy(x, y, w, h):
     y2 = y1 + h
     return x1, y1, x2, y2
 
+
+def get_iou(ground_truth, pred):
+    # coordinates of the area of intersection.
+    ix1 = np.maximum(ground_truth[0], pred[0])
+    iy1 = np.maximum(ground_truth[1], pred[1])
+    ix2 = np.minimum(ground_truth[2], pred[2])
+    iy2 = np.minimum(ground_truth[3], pred[3])
+
+    # Intersection height and width.
+    i_height = np.maximum(iy2 - iy1 + 1, np.array(0.))
+    i_width = np.maximum(ix2 - ix1 + 1, np.array(0.))
+
+    area_of_intersection = i_height * i_width
+
+    # Ground Truth dimensions.
+    gt_height = ground_truth[3] - ground_truth[1] + 1
+    gt_width = ground_truth[2] - ground_truth[0] + 1
+
+    # Prediction dimensions.
+    pd_height = pred[3] - pred[1] + 1
+    pd_width = pred[2] - pred[0] + 1
+
+    area_of_union = gt_height * gt_width + pd_height * pd_width - area_of_intersection
+
+    iou = area_of_intersection / area_of_union
+
+    return iou
+
 class DeepFaceHandler:
     def __init__(self, faces_path: str, detector: str = 'mediapipe', extractor: str = 'VGG-Face'):
         self.faces_path = faces_path
@@ -65,6 +93,7 @@ class DeepFaceHandler:
             print('Сотрудника нет в базе лиц')
 
 
+
     def main_loop(self, vgg_treshold_cosine=0.2, cam=0):
         cap = cv2.VideoCapture(cam)
         while True:
@@ -79,29 +108,34 @@ class DeepFaceHandler:
             phone_confidence = 0
             if phone_predict != []:
                 print(phone_predict[0])
+                cv2.rectangle(frame, (int(phone_predict[0][0]), int(phone_predict[0][1])),
+                                  (int(phone_predict[0][2]), int(phone_predict[0][3])), (0, 255, 255), 2)
                 phone_confidence = phone_predict[0][4]
             if not df[0]['identity'].empty:
-                if phone_confidence < 0.45:
+                left, top, right, bottom = xywh2xyxy(df[0]['source_x'][0],
+                                                     df[0]['source_y'][0],
+                                                     df[0]['source_w'][0],
+                                                     df[0]['source_h'][0])
+                # iou = get_iou((left, top, right, bottom), phone_predict[:4])
+                if phone_confidence > 0.65:
+                    print('Пожалуйста, уберите телефон')
+                else:
                     face_path = df[0]['identity'][0]
                     face_name = translit(face_path[face_path.rfind("/") + 1:-4], language_code="ru").split("_")
                     if df[0]['VGG-Face_cosine'][0] < vgg_treshold_cosine:
-
                         # for situations like this: Роман леонтЬев
                         face_name = " ".join([fn[0].upper() + fn[1:].lower() for fn in face_name])
                         print(f'Здравствуйте, {face_name}!')
                         print(df[0])
-                        left, top, right, bottom = xywh2xyxy(df[0]['source_x'][0],
-                                                             df[0]['source_y'][0],
-                                                             df[0]['source_w'][0],
-                                                             df[0]['source_h'][0])
+
                         cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
                         # Draw a label with a name below the face
                         cv2.rectangle(frame, (left, bottom + 35), (right, bottom), (0, 0, 255), cv2.FILLED)
-                        cv2.putText(frame, translit(face_name, language_code="ru", reversed=True), (left + 6, bottom + 12),
+                        cv2.putText(frame, translit(face_name, language_code="ru", reversed=True),
+                                    (left + 6, bottom + 12),
                                     cv2.FONT_HERSHEY_DUPLEX, 0.003 * (bottom - top),
                                     (255, 255, 255), 1)
-                else:
-                    print('Пожалуйста, уберите телефон')
+
             #except:
                 #print('Лицо не распознано')
             cv2.imshow('image', frame)
@@ -113,6 +147,4 @@ class DeepFaceHandler:
 
 path = r"C:\Users\user\Downloads\faces"
 dfh = DeepFaceHandler(path, detector='mediapipe')
-dfh.save_face(r'C:\Users\user\Downloads\timur.jpg', 'Тимур Юнусов')
-
 dfh.main_loop()
