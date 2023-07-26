@@ -145,6 +145,6 @@ class DeepFaceHandler:
         cap.release()
         cv2.destroyAllWindows()
 
-path = r"C:\Users\user\Downloads\faces"
+path = "faces"
 dfh = DeepFaceHandler(path, detector='mediapipe')
 dfh.main_loop()
