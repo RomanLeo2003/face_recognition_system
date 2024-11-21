@@ -3,6 +3,7 @@
 `
 pip install -r requirements.txt
 `
+
 `
 python deepface_recognition.py
 `
